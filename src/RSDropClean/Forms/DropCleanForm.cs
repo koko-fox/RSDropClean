@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace RSDropClean.Forms;
@@ -9,6 +10,10 @@ public partial class DropCleanForm : Form
   private DropCleaner? dropCleaner = null;
   private DropCleanConfig config = new();
   private List<RSItem> items = [];
+  private string gameWindowTitle = string.Empty;
+
+  [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+  private static extern bool SetWindowText(IntPtr hWnd, string lpString);
 
   public DropCleanForm()
   {
@@ -21,6 +26,15 @@ public partial class DropCleanForm : Form
         dropCleaner.Stop();
         dropCleaner.Close();
       }
+
+      if (targetProcess != null)
+      {
+        var hWnd = targetProcess.MainWindowHandle;
+        if (hWnd != IntPtr.Zero)
+        {
+          SetWindowText(hWnd, gameWindowTitle);
+        }
+      }
     };
 
     openProcessListButton.Click += (sender, e) =>
@@ -28,7 +42,26 @@ public partial class DropCleanForm : Form
       using var processListForm = new ProcessListForm();
       processListForm.OnProcessSelected += process =>
       {
+        if (targetProcess != null)
+        {
+          var hWnd = targetProcess.MainWindowHandle;
+          if (hWnd != IntPtr.Zero)
+          {
+            SetWindowText(hWnd, gameWindowTitle);
+          }
+        }
+
         targetProcess = process;
+        if (targetProcess != null)
+        {
+          gameWindowTitle = process.MainWindowTitle;
+
+          var hWnd = targetProcess.MainWindowHandle;
+          if (hWnd != IntPtr.Zero)
+          {
+            SetWindowText(hWnd, gameWindowTitle + " -attached");
+          }
+        }
       };
       processListForm.ShowDialog();
     };
