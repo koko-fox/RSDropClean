@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 
 namespace RSDropClean.Forms;
 
@@ -10,6 +11,8 @@ public partial class DropCleanForm : Form
   private DropCleaner? dropCleaner = null;
   private DropCleanConfig config = new();
   private List<RSItem> items = [];
+  private List<RSItemCategory>? itemCategories = [];
+  private List<ListViewItem> allListViewItems = [];
   private string gameWindowTitle = string.Empty;
 
   [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -85,10 +88,13 @@ public partial class DropCleanForm : Form
       }
     };
 
-    itemListView.ItemCheck += (sender, e) =>
+    itemListView.ItemChecked += (sender, e) =>
     {
-      var item = itemListView.Items[e.Index];
-      bool willBeChecked = (e.NewValue == CheckState.Checked);
+      if (!e.Item.Focused)
+        return;
+
+      var item = e.Item;
+      var willBeChecked = item.Checked;
 
       if (int.TryParse(item.SubItems[0].Text, out int id))
       {
@@ -97,14 +103,21 @@ public partial class DropCleanForm : Form
     };
 
     LoadItemData();
+    SetupCategoryFilterDropDown();
     config.Load();
+
     foreach (var item in items)
     {
       var listItem = new ListViewItem(item.Id.ToString());
       listItem.SubItems.Add(item.Name);
       listItem.Checked = config.IsRemoveMarkdItem(item.Id);
-      itemListView.Items.Add(listItem);
+      listItem.Tag = item;
+      allListViewItems.Add(listItem);
     }
+
+    itemListView.BeginUpdate();
+    itemListView.Items.AddRange(allListViewItems.ToArray());
+    itemListView.EndUpdate();
   }
 
   private void LoadItemData()
@@ -131,7 +144,8 @@ public partial class DropCleanForm : Form
 
         var id = BitConverter.ToUInt16(itemDataBuffer[0..2]);
         var name = shiftJisEncoding.GetString(itemDataBuffer[0x04..0x36]);
-        var rsItem = new RSItem(id, name);
+        var category = BitConverter.ToUInt16(itemDataBuffer[0x4c..0x4e]);
+        var rsItem = new RSItem(id, name, category);
         items.Add(rsItem);
       }
     }
@@ -139,5 +153,67 @@ public partial class DropCleanForm : Form
     {
       MessageBox.Show(ex.ToString(), "error");
     }
+  }
+
+  private void SetupCategoryFilterDropDown()
+  {
+    var json = File.ReadAllText("./itemCategories.json");
+    itemCategories = JsonSerializer.Deserialize<List<RSItemCategory>>(json);
+
+    categorySelectDropDown.Items.Add("All Items");
+
+    if (itemCategories != null)
+    {
+      var categories = itemCategories.Select(category => category.Name).ToArray();
+      categorySelectDropDown.BeginUpdate();
+      categorySelectDropDown.Items.AddRange(categories);
+      categorySelectDropDown.EndUpdate();
+    }
+
+    categorySelectDropDown.SelectedIndexChanged += (sender, e) =>
+    {
+      if (categorySelectDropDown.SelectedItem == null)
+        return;
+
+      if (categorySelectDropDown.SelectedIndex == 0)
+      {
+        itemListView.BeginUpdate();
+        itemListView.Items.Clear();
+        itemListView.Items.AddRange(allListViewItems.ToArray());
+        itemListView.EndUpdate();
+      }
+      else
+      {
+        var selectedCategoryName = categorySelectDropDown.SelectedItem.ToString();
+        if (selectedCategoryName != null)
+        {
+          FilterItemListView(selectedCategoryName);
+        }
+      }
+    };
+  }
+
+  private void FilterItemListView(string categoryName)
+  {
+    itemListView.Items.Clear();
+
+    var category = itemCategories?.FirstOrDefault(category => category.Name == categoryName);
+    if (category == null)
+      return;
+
+    var filteredItems =
+    allListViewItems
+    .Where(item =>
+    {
+      if (item.Tag == null)
+        return false;
+
+      return ((RSItem)item.Tag).Category == category.Index;
+    })
+    .ToArray();
+
+    itemListView.BeginUpdate();
+    itemListView.Items.AddRange(filteredItems);
+    itemListView.EndUpdate();
   }
 }

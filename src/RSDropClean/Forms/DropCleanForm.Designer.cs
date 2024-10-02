@@ -33,6 +33,7 @@ namespace RSDropClean.Forms
       itemListView = new ListView();
       index = new ColumnHeader();
       name = new ColumnHeader();
+      categorySelectDropDown = new ComboBox();
       SuspendLayout();
       // 
       // openProcessListButton
@@ -59,9 +60,12 @@ namespace RSDropClean.Forms
       // 
       itemListView.CheckBoxes = true;
       itemListView.Columns.AddRange(new ColumnHeader[] { index, name });
-      itemListView.Location = new Point(12, 43);
+      itemListView.FullRowSelect = true;
+      itemListView.HeaderStyle = ColumnHeaderStyle.Nonclickable;
+      itemListView.Location = new Point(12, 72);
+      itemListView.MultiSelect = false;
       itemListView.Name = "itemListView";
-      itemListView.Size = new Size(460, 406);
+      itemListView.Size = new Size(460, 377);
       itemListView.TabIndex = 0;
       itemListView.UseCompatibleStateImageBehavior = false;
       itemListView.View = View.Details;
@@ -76,11 +80,20 @@ namespace RSDropClean.Forms
       name.Text = "Name";
       name.Width = 300;
       // 
+      // categorySelectDropDown
+      // 
+      categorySelectDropDown.FormattingEnabled = true;
+      categorySelectDropDown.Location = new Point(12, 43);
+      categorySelectDropDown.Name = "categorySelectDropDown";
+      categorySelectDropDown.Size = new Size(460, 23);
+      categorySelectDropDown.TabIndex = 2;
+      // 
       // DropCleanForm
       // 
       AutoScaleDimensions = new SizeF(7F, 15F);
       AutoScaleMode = AutoScaleMode.Font;
       ClientSize = new Size(484, 461);
+      Controls.Add(categorySelectDropDown);
       Controls.Add(itemListView);
       Controls.Add(dropCleanCheckBox);
       Controls.Add(openProcessListButton);
@@ -97,5 +110,6 @@ namespace RSDropClean.Forms
     private ListView itemListView;
     private ColumnHeader index;
     private ColumnHeader name;
+    private ComboBox categorySelectDropDown;
   }
 }

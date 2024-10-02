@@ -2,7 +2,7 @@ namespace RSDropClean;
 
 internal class DropCleanConfig
 {
-  private List<bool> dropCleanTable = [];
+  private List<bool> dropCleanTable = new(Enumerable.Repeat(false, 0xffff));
   private const string ConfigFilePath = "./dc.dat";
 
   public bool IsRemoveMarkdItem(int id)
@@ -24,21 +24,40 @@ internal class DropCleanConfig
 
   public void Load()
   {
-    using var reader = new BinaryReader(File.Open(ConfigFilePath, FileMode.OpenOrCreate));
+    if (!File.Exists(ConfigFilePath))
+      return;
 
-    while (reader.BaseStream.Position != reader.BaseStream.Length)
+    try
     {
-      dropCleanTable.Add(reader.ReadBoolean());
+      using var reader = new BinaryReader(File.Open(ConfigFilePath, FileMode.Open));
+
+      int index = 0;
+      while (reader.BaseStream.Position != reader.BaseStream.Length)
+      {
+        dropCleanTable[index] = reader.ReadBoolean();
+        index++;
+      }
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show(ex.Message);
     }
   }
 
   public void Save()
   {
-    using var writer = new BinaryWriter(File.Open(ConfigFilePath, FileMode.Create));
-
-    foreach (bool value in dropCleanTable)
+    try
     {
-      writer.Write(value);
+      using var writer = new BinaryWriter(File.Open(ConfigFilePath, FileMode.OpenOrCreate));
+
+      foreach (bool value in dropCleanTable)
+      {
+        writer.Write(value);
+      }
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show(ex.Message);
     }
   }
 }
